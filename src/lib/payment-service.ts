@@ -391,8 +391,3 @@ export class PaymentService {
   }
 }
 
-// Export commonly used functions
-export {
-  PaymentService,
-  PhilippinePaymentValidator
-};

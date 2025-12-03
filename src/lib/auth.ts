@@ -1,7 +1,7 @@
 // Authentication utilities
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { JWTPayload, User } from '@/types/auth';
+import { JWTPayload, User, UserRole } from '@/types/auth';
 
 // Environment variables with fallbacks for development
 const JWT_SECRET = process.env.JWT_SECRET || 'dental-management-dev-secret-key-change-in-production';
