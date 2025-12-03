@@ -184,7 +184,7 @@ export class RBACManager {
     }
 
     // Check specific permissions
-    return permissions.some(permission =>
+    return permissions.some((permission: Permission) =>
       (permission.resource === resource || permission.resource === '*') &&
       (permission.action === action || permission.action === PermissionAction.MANAGE)
     );

@@ -23,7 +23,7 @@ export class AuthUtils {
 
   // Generate access token
   static generateToken(user: Omit<User, 'password'>): string {
-    const payload: JWTPayload = {
+    const payload = {
       userId: user.id,
       email: user.email,
       role: user.role,
@@ -32,18 +32,18 @@ export class AuthUtils {
       exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
     };
 
-    return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+    return jwt.sign(payload, JWT_SECRET as string);
   }
 
   // Generate refresh token
   static generateRefreshToken(userId: string): string {
-    return jwt.sign({ userId }, JWT_REFRESH_SECRET, { expiresIn: JWT_REFRESH_EXPIRES_IN });
+    return jwt.sign({ userId }, JWT_REFRESH_SECRET as string);
   }
 
   // Verify access token
   static verifyToken(token: string): JWTPayload | null {
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+      const decoded = jwt.verify(token, JWT_SECRET as string) as JWTPayload;
       return decoded;
     } catch (error) {
       console.error('Token verification failed:', error);
@@ -54,7 +54,7 @@ export class AuthUtils {
   // Verify refresh token
   static verifyRefreshToken(token: string): { userId: string } | null {
     try {
-      const decoded = jwt.verify(token, JWT_REFRESH_SECRET) as { userId: string };
+      const decoded = jwt.verify(token, JWT_REFRESH_SECRET as string) as { userId: string };
       return decoded;
     } catch (error) {
       console.error('Refresh token verification failed:', error);
@@ -63,7 +63,7 @@ export class AuthUtils {
   }
 
   // Extract token from Authorization header
-  static extractTokenFromHeader(authHeader: string | undefined): string | null {
+  static extractTokenFromHeader(authHeader: string | undefined | null): string | null {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return null;
     }

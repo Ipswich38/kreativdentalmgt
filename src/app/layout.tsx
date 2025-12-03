@@ -6,7 +6,11 @@ export const metadata: Metadata = {
   description: "Premium dental practice management software built for modern clinics",
   keywords: "dental management, practice software, appointment scheduling, patient records",
   authors: [{ name: "KreativDental" }],
-  viewport: "width=device-width, initial-scale=1",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
