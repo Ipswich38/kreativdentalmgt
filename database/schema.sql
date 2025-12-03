@@ -439,7 +439,7 @@ CREATE TABLE invoice_items (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Payments
+-- Payments (Flexible Schema for Future Payment Methods)
 CREATE TABLE payments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     clinic_id UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
@@ -451,31 +451,80 @@ CREATE TABLE payments (
     payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
     amount INTEGER NOT NULL, -- in centavos
 
-    -- Payment Method
+    -- Payment Method (Flexible)
     payment_method VARCHAR(50) NOT NULL,
-    payment_reference VARCHAR(255),
+    payment_category VARCHAR(20) NOT NULL DEFAULT 'digital', -- 'cash', 'digital', 'bank', 'crypto', etc.
 
-    -- Philippine Payment Methods
-    gcash_reference VARCHAR(100),
-    paymaya_reference VARCHAR(100),
+    -- Transaction References (REQUIRED for non-cash payments)
+    transaction_reference VARCHAR(255), -- Main reference number
+    external_transaction_id VARCHAR(255), -- Payment gateway transaction ID
+    authorization_code VARCHAR(100), -- For card payments
+
+    -- Flexible Payment Details (JSON for extensibility)
+    payment_details JSONB NOT NULL DEFAULT '{}', -- Stores method-specific data
+
+    -- Verification Details
+    verification_status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    verification_notes TEXT,
+    verified_by UUID REFERENCES users(id),
+    verified_at TIMESTAMPTZ,
+
+    -- Bank Transfer Specific
     bank_name VARCHAR(100),
+    account_number VARCHAR(50),
+    routing_number VARCHAR(20),
+
+    -- Digital Wallet References
+    digital_wallet_type VARCHAR(50), -- gcash, paymaya, grabpay, etc.
+    digital_wallet_reference VARCHAR(100),
+
+    -- Card Payment Details
+    card_type VARCHAR(20), -- visa, mastercard, amex
+    card_last_four VARCHAR(4),
+    card_approval_code VARCHAR(20),
+
+    -- Check Details
     check_number VARCHAR(50),
+    check_bank VARCHAR(100),
+    check_date DATE,
+
+    -- Receipt & Documentation
+    receipt_url TEXT,
+    receipt_number VARCHAR(100),
+    supporting_documents JSONB DEFAULT '[]', -- Array of document URLs
 
     -- Notes
     notes TEXT,
+    internal_notes TEXT, -- Staff-only notes
 
-    -- Status
-    status VARCHAR(20) NOT NULL DEFAULT 'confirmed',
+    -- Status & Workflow
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    workflow_stage VARCHAR(50) DEFAULT 'submitted', -- submitted, verified, approved, deposited, etc.
 
-    -- Metadata
+    -- Financial Reconciliation
+    reconciliation_status VARCHAR(20) DEFAULT 'pending',
+    reconciled_at TIMESTAMPTZ,
+    reconciled_by UUID REFERENCES users(id),
+    bank_statement_date DATE,
+
+    -- Metadata (Extensible)
+    metadata JSONB DEFAULT '{}', -- For future custom fields
+    tags TEXT[], -- For categorization and filtering
+
+    -- Audit Fields
     received_by UUID NOT NULL REFERENCES users(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-    -- Constraints
+    -- Constraints (Flexible for future payment methods)
     UNIQUE(clinic_id, payment_number),
-    CONSTRAINT valid_payment_method CHECK (payment_method IN ('cash', 'credit_card', 'debit_card', 'gcash', 'paymaya', 'bank_transfer', 'check', 'installment')),
-    CONSTRAINT valid_payment_status CHECK (status IN ('pending', 'confirmed', 'cancelled', 'refunded'))
+    CONSTRAINT valid_payment_status CHECK (status IN ('pending', 'processing', 'confirmed', 'failed', 'cancelled', 'refunded', 'disputed')),
+    CONSTRAINT valid_verification_status CHECK (verification_status IN ('pending', 'verified', 'rejected', 'requires_review')),
+    CONSTRAINT valid_payment_category CHECK (payment_category IN ('cash', 'digital', 'bank', 'card', 'crypto', 'other')),
+    CONSTRAINT non_cash_requires_reference CHECK (
+        (payment_method = 'cash') OR
+        (payment_method != 'cash' AND (transaction_reference IS NOT NULL OR external_transaction_id IS NOT NULL))
+    )
 );
 
 -- ==============================================
@@ -537,27 +586,319 @@ CREATE TABLE inventory_items (
 );
 
 -- ==============================================
--- AUDIT & LOGGING
+-- EXTENSIBLE FEATURES FRAMEWORK
 -- ==============================================
 
--- Activity Logs
+-- Custom Fields (For extending any entity with custom data)
+CREATE TABLE custom_fields (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    clinic_id UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+
+    -- Field Configuration
+    entity_type VARCHAR(50) NOT NULL, -- 'patient', 'appointment', 'treatment', etc.
+    field_name VARCHAR(100) NOT NULL,
+    field_label VARCHAR(255) NOT NULL,
+    field_type VARCHAR(30) NOT NULL, -- 'text', 'number', 'date', 'select', 'checkbox', 'file'
+
+    -- Field Options (for select, checkbox, etc.)
+    field_options JSONB DEFAULT '[]',
+
+    -- Validation Rules
+    validation_rules JSONB DEFAULT '{}',
+
+    -- Display Settings
+    is_required BOOLEAN DEFAULT false,
+    is_searchable BOOLEAN DEFAULT false,
+    display_order INTEGER DEFAULT 0,
+
+    -- Status
+    is_active BOOLEAN DEFAULT true,
+
+    -- Metadata
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    UNIQUE(clinic_id, entity_type, field_name),
+    CONSTRAINT valid_field_type CHECK (field_type IN ('text', 'textarea', 'number', 'decimal', 'date', 'datetime', 'select', 'multiselect', 'checkbox', 'radio', 'file', 'email', 'phone', 'url'))
+);
+
+-- Custom Field Values (Stores actual custom field data)
+CREATE TABLE custom_field_values (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    clinic_id UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+    custom_field_id UUID NOT NULL REFERENCES custom_fields(id) ON DELETE CASCADE,
+
+    -- Entity Reference
+    entity_type VARCHAR(50) NOT NULL,
+    entity_id UUID NOT NULL,
+
+    -- Value Storage (Flexible)
+    text_value TEXT,
+    number_value DECIMAL,
+    date_value DATE,
+    datetime_value TIMESTAMPTZ,
+    boolean_value BOOLEAN,
+    json_value JSONB,
+
+    -- Metadata
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    UNIQUE(clinic_id, custom_field_id, entity_id)
+);
+
+-- Notifications & Communications System
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    clinic_id UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+
+    -- Recipient
+    user_id UUID REFERENCES users(id),
+    patient_id UUID REFERENCES patients(id),
+
+    -- Notification Details
+    type VARCHAR(50) NOT NULL, -- 'appointment_reminder', 'payment_due', 'system_update', etc.
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+
+    -- Delivery Channels
+    channels JSONB NOT NULL DEFAULT '["in_app"]', -- ['email', 'sms', 'in_app', 'push']
+
+    -- Status Tracking
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    scheduled_at TIMESTAMPTZ,
+    sent_at TIMESTAMPTZ,
+    read_at TIMESTAMPTZ,
+
+    -- Related Entity
+    entity_type VARCHAR(50),
+    entity_id UUID,
+
+    -- Delivery Attempts
+    delivery_attempts JSONB DEFAULT '[]',
+
+    -- Metadata
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT valid_notification_status CHECK (status IN ('pending', 'scheduled', 'sent', 'delivered', 'failed', 'cancelled'))
+);
+
+-- Templates System (For forms, documents, communications)
+CREATE TABLE templates (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    clinic_id UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+
+    -- Template Details
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    type VARCHAR(50) NOT NULL, -- 'email', 'sms', 'document', 'form', 'report'
+    category VARCHAR(100),
+
+    -- Template Content
+    content JSONB NOT NULL, -- Stores template structure/content
+    variables JSONB DEFAULT '[]', -- Available variables for replacement
+
+    -- Styling/Layout
+    styling JSONB DEFAULT '{}',
+
+    -- Status
+    is_active BOOLEAN DEFAULT true,
+    is_default BOOLEAN DEFAULT false,
+
+    -- Version Control
+    version INTEGER DEFAULT 1,
+    parent_template_id UUID REFERENCES templates(id),
+
+    -- Metadata
+    created_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    UNIQUE(clinic_id, name, type)
+);
+
+-- File Storage & Documents Management
+CREATE TABLE documents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    clinic_id UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+
+    -- Document Details
+    original_name VARCHAR(255) NOT NULL,
+    stored_name VARCHAR(255) NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size BIGINT NOT NULL,
+    mime_type VARCHAR(100) NOT NULL,
+    file_hash VARCHAR(64), -- For duplicate detection
+
+    -- Classification
+    document_type VARCHAR(50) NOT NULL, -- 'patient_record', 'treatment_photo', 'xray', 'consent_form', etc.
+    category VARCHAR(100),
+    tags TEXT[],
+
+    -- Related Entity
+    entity_type VARCHAR(50),
+    entity_id UUID,
+
+    -- Access Control
+    is_public BOOLEAN DEFAULT false,
+    access_level VARCHAR(20) DEFAULT 'clinic', -- 'public', 'clinic', 'staff', 'specific_users'
+    allowed_users UUID[],
+
+    -- Document Metadata
+    metadata JSONB DEFAULT '{}',
+    ocr_text TEXT, -- For searchable documents
+
+    -- Status
+    status VARCHAR(20) DEFAULT 'active',
+
+    -- Audit
+    uploaded_by UUID NOT NULL REFERENCES users(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT valid_document_status CHECK (status IN ('active', 'archived', 'deleted')),
+    CONSTRAINT valid_access_level CHECK (access_level IN ('public', 'clinic', 'staff', 'specific_users'))
+);
+
+-- System Settings & Configuration (Extensible)
+CREATE TABLE system_settings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    clinic_id UUID REFERENCES clinics(id) ON DELETE CASCADE, -- NULL for global settings
+
+    -- Setting Details
+    setting_key VARCHAR(255) NOT NULL,
+    setting_value JSONB,
+    setting_type VARCHAR(30) NOT NULL, -- 'string', 'number', 'boolean', 'json', 'encrypted'
+
+    -- Categorization
+    category VARCHAR(100),
+    subcategory VARCHAR(100),
+
+    -- Metadata
+    description TEXT,
+    is_encrypted BOOLEAN DEFAULT false,
+    is_public BOOLEAN DEFAULT false, -- Can be accessed by frontend
+
+    -- Version Control
+    version INTEGER DEFAULT 1,
+    previous_value JSONB,
+
+    -- Audit
+    updated_by UUID REFERENCES users(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    UNIQUE(clinic_id, setting_key),
+    CONSTRAINT valid_setting_type CHECK (setting_type IN ('string', 'number', 'boolean', 'json', 'encrypted', 'array'))
+);
+
+-- ==============================================
+-- AUDIT & LOGGING (ENHANCED)
+-- ==============================================
+
+-- Activity Logs (Enhanced for better tracking)
 CREATE TABLE activity_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     clinic_id UUID NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id),
+    session_id VARCHAR(100),
 
     -- Activity Details
     action VARCHAR(100) NOT NULL,
     resource_type VARCHAR(100) NOT NULL,
     resource_id UUID,
 
-    -- Details
+    -- Change Tracking
+    old_values JSONB,
+    new_values JSONB,
+
+    -- Request Details
     description TEXT,
     ip_address INET,
     user_agent TEXT,
+    request_method VARCHAR(10),
+    request_path TEXT,
+
+    -- Response Details
+    status_code INTEGER,
+    response_time_ms INTEGER,
+
+    -- Categorization
+    category VARCHAR(50), -- 'authentication', 'patient_data', 'financial', 'system'
+    severity VARCHAR(20) DEFAULT 'info', -- 'debug', 'info', 'warning', 'error', 'critical'
+
+    -- Additional Context
+    metadata JSONB DEFAULT '{}',
+    tags TEXT[],
 
     -- Metadata
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT valid_severity CHECK (severity IN ('debug', 'info', 'warning', 'error', 'critical'))
+);
+
+-- System Health & Monitoring
+CREATE TABLE system_metrics (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    clinic_id UUID REFERENCES clinics(id) ON DELETE CASCADE,
+
+    -- Metric Details
+    metric_name VARCHAR(100) NOT NULL,
+    metric_value DECIMAL,
+    metric_unit VARCHAR(20),
+
+    -- Categorization
+    category VARCHAR(50), -- 'performance', 'usage', 'error_rate', 'storage'
+
+    -- Time Series Data
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    time_bucket INTERVAL, -- For aggregated metrics
+
+    -- Additional Data
+    metadata JSONB DEFAULT '{}',
+
+    -- Indexes for time-series queries
+    UNIQUE(clinic_id, metric_name, timestamp)
+);
+
+-- Error Logs (For debugging and monitoring)
+CREATE TABLE error_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    clinic_id UUID REFERENCES clinics(id),
+    user_id UUID REFERENCES users(id),
+
+    -- Error Details
+    error_type VARCHAR(100) NOT NULL,
+    error_message TEXT NOT NULL,
+    stack_trace TEXT,
+
+    -- Context
+    request_path TEXT,
+    request_method VARCHAR(10),
+    request_body JSONB,
+    query_params JSONB,
+
+    -- Environment
+    user_agent TEXT,
+    ip_address INET,
+
+    -- Classification
+    severity VARCHAR(20) NOT NULL,
+    status VARCHAR(20) DEFAULT 'new', -- 'new', 'investigating', 'resolved', 'ignored'
+
+    -- Resolution
+    resolved_at TIMESTAMPTZ,
+    resolved_by UUID REFERENCES users(id),
+    resolution_notes TEXT,
+
+    -- Metadata
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT valid_error_severity CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+    CONSTRAINT valid_error_status CHECK (status IN ('new', 'investigating', 'resolved', 'ignored'))
 );
 
 -- ==============================================
