@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "KreativDental Management System",
-  description: "Premium dental practice management software built for modern clinics",
-  keywords: "dental management, practice software, appointment scheduling, patient records",
-  authors: [{ name: "KreativDental" }],
+  title: "Dental Practice Management System",
+  description: "Professional dental clinic management software for Philippine healthcare providers",
+  keywords: "dental management, practice software, appointment scheduling, patient records, Philippines, healthcare",
+  authors: [{ name: "Dental Management System" }],
 };
 
 export const viewport = {

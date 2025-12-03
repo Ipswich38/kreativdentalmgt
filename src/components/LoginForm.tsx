@@ -134,28 +134,19 @@ export default function LoginForm({ onSubmit, isLoading, error }: LoginFormProps
           )}
         </button>
 
-        {/* Demo Credentials */}
-        <div className="mt-8 p-4 bg-blue-50 rounded-xl border border-blue-100">
-          <div className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">
-            Demo Credentials
+        {/* Help Section */}
+        <div className="mt-8 p-4 bg-gray-50 rounded-xl border border-gray-100">
+          <div className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">
+            Need Help?
           </div>
-          <div className="space-y-2 text-sm text-blue-800">
-            <div className="flex justify-between">
-              <span className="font-medium">Admin:</span>
-              <span className="font-mono">admin@kreativdental.com</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-medium">Dentist:</span>
-              <span className="font-mono">dentist@kreativdental.com</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-medium">Staff:</span>
-              <span className="font-mono">staff@kreativdental.com</span>
-            </div>
-            <div className="flex justify-between items-center pt-2 border-t border-blue-200">
-              <span className="font-medium">Password:</span>
-              <span className="font-mono bg-blue-100 px-2 py-1 rounded">Admin123!</span>
-            </div>
+          <div className="space-y-2 text-sm text-gray-600">
+            <p>Contact your clinic administrator for login credentials.</p>
+            <p>If you're experiencing login issues, please check:</p>
+            <ul className="list-disc list-inside ml-2 space-y-1 text-xs">
+              <li>Your email address is correct</li>
+              <li>Your password is entered correctly</li>
+              <li>Your account is active in the system</li>
+            </ul>
           </div>
         </div>
       </form>

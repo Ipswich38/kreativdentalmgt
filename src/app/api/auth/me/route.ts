@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthUtils, MockAuthService } from '@/lib/auth';
+import { AuthUtils, ProductionAuthService } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const user = await MockAuthService.getUserById(payload.userId);
+    const authService = new ProductionAuthService();
+    const user = await authService.getUserById(payload.userId);
+
     if (!user) {
       return NextResponse.json(
         { error: 'User not found' },
@@ -33,6 +35,15 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Get user error:', error);
+
+    // Handle production readiness error
+    if (error instanceof Error && error.message.includes('not implemented - requires Supabase setup')) {
+      return NextResponse.json(
+        { error: 'User service not configured. Please contact system administrator.' },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

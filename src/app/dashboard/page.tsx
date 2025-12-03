@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { User } from '@/types/auth';
+import { currency, datetime } from '@/lib/localization';
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -74,7 +75,7 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div>
-                <h1 className="text-xl font-medium text-gray-900">KreativDental</h1>
+                <h1 className="text-xl font-medium text-gray-900">Dental Practice</h1>
                 <p className="text-xs text-gray-500 uppercase tracking-wider">Dashboard</p>
               </div>
             </div>
@@ -141,7 +142,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-wider text-gray-400 mb-1">Revenue Today</p>
-                <p className="text-3xl font-medium text-gray-900">$2,840</p>
+                <p className="text-3xl font-medium text-gray-900">{currency.formatPHP(15420)}</p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

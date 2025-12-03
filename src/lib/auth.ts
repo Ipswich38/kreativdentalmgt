@@ -127,82 +127,54 @@ export class AuthUtils {
   }
 }
 
-// Mock user data for development (will be replaced with Supabase)
-export const mockUsers: (User & { password: string })[] = [
-  {
-    id: '1',
-    email: 'admin@kreativdental.com',
-    password: '$2b$12$tdXB8U6kP7YQqO86D/VPSeCQpT6yAa12bDiOW4SJ5jkFuEN2p1gz.', // password: Admin123!
-    firstName: 'Dr. Sarah',
-    lastName: 'Johnson',
-    role: 'clinic_admin' as any,
-    isActive: true,
-    clinicId: 'clinic_1',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date(),
-    lastLogin: undefined
-  },
-  {
-    id: '2',
-    email: 'dentist@kreativdental.com',
-    password: '$2b$12$7CF5q04sjiu1tFzcGAUCcODVAId6zIhVtigg6lejrPKphZrSOJzLS', // password: Dentist123!
-    firstName: 'Dr. Michael',
-    lastName: 'Smith',
-    role: 'dentist' as any,
-    isActive: true,
-    clinicId: 'clinic_1',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date(),
-    lastLogin: undefined
-  },
-  {
-    id: '3',
-    email: 'staff@kreativdental.com',
-    password: '$2b$12$LxsEeZVZoqNbTzqYmo8XfOZXSHSIudtZMzpSkr.WtXN0UQ.UfI4F.', // password: Staff123!
-    firstName: 'Jennifer',
-    lastName: 'Davis',
-    role: 'receptionist' as any,
-    isActive: true,
-    clinicId: 'clinic_1',
-    createdAt: new Date('2024-01-01'),
-    updatedAt: new Date(),
-    lastLogin: undefined
-  }
-];
+// Production-ready authentication service interface
+export interface AuthService {
+  authenticateUser(email: string, password: string, clinicId?: string): Promise<User | null>;
+  getUserById(id: string): Promise<User | null>;
+  updateLastLogin(userId: string): Promise<void>;
+  createUser(userData: CreateUserData): Promise<User>;
+  updateUser(userId: string, updates: Partial<User>): Promise<User | null>;
+  deactivateUser(userId: string): Promise<boolean>;
+}
 
-// Mock authentication service (will be replaced with Supabase)
-export class MockAuthService {
-  static async authenticateUser(email: string, password: string): Promise<User | null> {
-    const user = mockUsers.find(u => u.email === email && u.isActive);
+export interface CreateUserData {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
+  clinicId: string;
+}
 
-    if (!user) {
-      return null;
-    }
-
-    const isValidPassword = await AuthUtils.verifyPassword(password, user.password);
-    if (!isValidPassword) {
-      return null;
-    }
-
-    // Return user without password
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+// Placeholder service - will be replaced with Supabase implementation
+export class ProductionAuthService implements AuthService {
+  async authenticateUser(email: string, password: string, clinicId?: string): Promise<User | null> {
+    // TODO: Implement with Supabase
+    throw new Error('Production authentication not implemented - requires Supabase setup');
   }
 
-  static async getUserById(id: string): Promise<User | null> {
-    const user = mockUsers.find(u => u.id === id && u.isActive);
-    if (!user) {
-      return null;
-    }
-
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+  async getUserById(id: string): Promise<User | null> {
+    // TODO: Implement with Supabase
+    throw new Error('User lookup not implemented - requires Supabase setup');
   }
 
-  static async updateLastLogin(userId: string): Promise<void> {
-    const user = mockUsers.find(u => u.id === userId);
-    if (user) {
-      user.lastLogin = new Date();
-    }
+  async updateLastLogin(userId: string): Promise<void> {
+    // TODO: Implement with Supabase
+    throw new Error('Last login update not implemented - requires Supabase setup');
+  }
+
+  async createUser(userData: CreateUserData): Promise<User> {
+    // TODO: Implement with Supabase
+    throw new Error('User creation not implemented - requires Supabase setup');
+  }
+
+  async updateUser(userId: string, updates: Partial<User>): Promise<User | null> {
+    // TODO: Implement with Supabase
+    throw new Error('User update not implemented - requires Supabase setup');
+  }
+
+  async deactivateUser(userId: string): Promise<boolean> {
+    // TODO: Implement with Supabase
+    throw new Error('User deactivation not implemented - requires Supabase setup');
   }
 }

@@ -63,7 +63,7 @@ export default function LoginPage() {
             </svg>
           </div>
           <div>
-            <h2 className="text-xl font-medium text-gray-900">KreativDental</h2>
+            <h2 className="text-xl font-medium text-gray-900">Dental Practice</h2>
             <p className="text-xs text-gray-500 uppercase tracking-wider">Management System</p>
           </div>
         </div>
@@ -115,7 +115,7 @@ export default function LoginPage() {
       {/* Footer */}
       <footer className="relative z-10 py-6 px-6 text-center">
         <p className="text-sm text-gray-400">
-          © 2024 KreativDental Management System. Built for modern dental practices.
+          © 2024 Dental Practice Management System. Built for Philippine dental clinics.
         </p>
       </footer>
     </div>

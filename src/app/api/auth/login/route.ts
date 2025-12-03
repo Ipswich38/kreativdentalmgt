@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AuthUtils, MockAuthService } from '@/lib/auth';
+import { AuthUtils, ProductionAuthService } from '@/lib/auth';
 import { LoginCredentials, LoginResponse } from '@/types/auth';
 
 export async function POST(request: NextRequest) {
@@ -22,12 +22,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // TODO: Extract clinic ID from subdomain or request context for multi-tenancy
+    const clinicId = request.headers.get('x-clinic-id') || undefined;
+
+    const authService = new ProductionAuthService();
+
     // Authenticate user
-    const user = await MockAuthService.authenticateUser(email, password);
+    const user = await authService.authenticateUser(email, password, clinicId);
 
     if (!user) {
       return NextResponse.json(
-        { error: 'Invalid credentials' },
+        { error: 'Invalid credentials or clinic access denied' },
         { status: 401 }
       );
     }
@@ -37,7 +42,7 @@ export async function POST(request: NextRequest) {
     const refreshToken = AuthUtils.generateRefreshToken(user.id);
 
     // Update last login
-    await MockAuthService.updateLastLogin(user.id);
+    await authService.updateLastLogin(user.id);
 
     const response: LoginResponse = {
       user,
@@ -60,6 +65,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Login error:', error);
+
+    // Handle production readiness error
+    if (error instanceof Error && error.message.includes('not implemented - requires Supabase setup')) {
+      return NextResponse.json(
+        { error: 'Authentication service not configured. Please contact system administrator.' },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
