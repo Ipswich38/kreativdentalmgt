@@ -335,7 +335,21 @@ export const StaffMemberSchema = z.object({
   pin: z.string().length(4).optional(),
 
   // Permissions
-  permissions: StaffPermissionsSchema.default({}),
+  permissions: StaffPermissionsSchema.default({
+    canEditStaff: false,
+    canEditPatients: false,
+    canEditAppointments: false,
+    canEditTreatments: false,
+    canEditPrescriptions: false,
+    canEditSettings: false,
+    canViewStaff: true,
+    canViewPatients: true,
+    canViewAppointments: true,
+    canViewTreatments: true,
+    canViewPrescriptions: true,
+    canViewSettings: false,
+    canViewStats: false
+  }),
 
   // Metadata
   createdAt: z.coerce.date().optional(),
@@ -501,7 +515,7 @@ export const PaymentSchema = z.object({
   verificationStatus: z.enum(['pending', 'verified', 'rejected', 'requires_review']).default('pending'),
 
   // Processing Details
-  paymentDetails: z.record(z.any()).default({}),
+  paymentDetails: z.record(z.string(), z.any()).default({}),
 
   // Documentation
   receiptUrl: z.string().url().optional(),

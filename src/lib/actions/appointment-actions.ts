@@ -441,10 +441,10 @@ export async function getAppointmentsByDateRange(
       .from('appointments')
       .select(`
         *,
-        patient:patients(id, first_name, last_name, phone),
-        dentist:users!appointments_dentist_id_fkey(id, first_name, last_name),
-        treatment:treatment_templates(name),
-        payments:payments(amount, status)
+        patients!inner(id, first_name, last_name, phone),
+        users!inner(id, first_name, last_name),
+        treatment_templates(name),
+        payments(amount, status)
       `)
       .eq('clinic_id', clinicId)
       .gte('appointment_date', startDate.toISOString().split('T')[0])
@@ -522,8 +522,8 @@ async function checkAppointmentConflicts(
       id,
       start_time,
       end_time,
-      patient:patients(first_name, last_name),
-      dentist:users!appointments_dentist_id_fkey(first_name, last_name)
+      patients!inner(first_name, last_name),
+      users!inner(first_name, last_name)
     `)
     .eq('clinic_id', clinicId)
     .eq('appointment_date', date.toISOString().split('T')[0])
@@ -552,10 +552,10 @@ async function checkAppointmentConflicts(
     ) {
       conflicts.push({
         appointmentId: existing.id,
-        patientName: `${existing.patient.first_name} ${existing.patient.last_name}`,
+        patientName: `${(existing as any).patients.first_name} ${(existing as any).patients.last_name}`,
         startTime: existing.start_time,
         endTime: existing.end_time,
-        dentistName: `${existing.dentist.first_name} ${existing.dentist.last_name}`
+        dentistName: `${(existing as any).users.first_name} ${(existing as any).users.last_name}`
       })
     }
   })
